@@ -1,0 +1,6 @@
+{
+  "name": "전선의 형성 원리와 온대 저기압의 일생",
+  "description": "중·고등학생 지구과학 수업용 한랭·온난·정체·폐색전선 및 온대 저기압 일생 인터랙티브 3D 시뮬레이션",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
