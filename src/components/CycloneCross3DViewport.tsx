@@ -102,14 +102,14 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
 
     scene.add(createTerrainAndBox());
 
-    const coldLeftMass = new ParametricAirMass(0x2563eb, 0.42, 0x1e40af);
-    const coolRightMass = new ParametricAirMass(0x3b82f6, 0.35, 0x1d4ed8);
-    const warmSectorMass = new ParametricAirMass(0xef4444, 0.36, 0xb91c1c);
+    const coldLeftMass = new ParametricAirMass(0x2563eb, 0.34, 0x1e40af);
+    const coolRightMass = new ParametricAirMass(0x3b82f6, 0.28, 0x1d4ed8);
+    const warmSectorMass = new ParametricAirMass(0xef4444, 0.29, 0xb91c1c);
     scene.add(coldLeftMass.group, coolRightMass.group, warmSectorMass.group);
 
     const coldRibbon = new FrontalSurfaceRibbon(0x38bdf8);
     const warmRibbon = new FrontalSurfaceRibbon(0xf87171);
-    scene.add(coldRibbon.mesh, warmRibbon.mesh);
+    scene.add(coldRibbon.group, warmRibbon.group);
 
     const cbCloud = createCumulonimbusGroup();
     const stratusCloud = createLayeredStratusGroup();
@@ -137,14 +137,12 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
     }
 
     const anchors: AnchorSpec[] = [
-      { id: 'cut_a', text: 'A (서쪽)', tone: 'front', pos: new THREE.Vector3(-ATM_HALF_W + 0.5, 0.25, 2.5), visible: true },
-      { id: 'cut_ap', text: "A' (동쪽)", tone: 'front', pos: new THREE.Vector3(ATM_HALF_W - 0.5, 0.25, 2.5), visible: true },
       { id: 'cold_l', text: '찬 공기', tone: 'cold', pos: new THREE.Vector3(), visible: true },
       { id: 'warm_s', text: '따뜻한 공기', tone: 'warm', pos: new THREE.Vector3(), visible: true },
       { id: 'cold_r', text: '앞쪽 찬 공기', tone: 'cold', pos: new THREE.Vector3(), visible: true },
-      { id: 'cb_c', text: '적란운 (소나기)', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
-      { id: 'st_c', text: '층운형 구름 (비)', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
-      { id: 'occ_c', text: '폐색전선 (상층 상승)', tone: 'front', pos: new THREE.Vector3(), visible: false },
+      { id: 'cb_c', text: '적란운', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
+      { id: 'st_c', text: '층운형 구름', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
+      { id: 'occ_c', text: '폐색전선', tone: 'front', pos: new THREE.Vector3(), visible: false },
     ];
     setActiveAnchors(anchors.map((a) => ({ id: a.id, text: a.text, tone: a.tone })));
 
@@ -195,18 +193,18 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
         warmUpArrow.rotation.set(0, 0, Math.PI);
         warmGlideArrow.visible = false;
 
-        anchors[2].visible = true;
-        anchors[2].pos.set(Math.max(-5.8, xMid - 2.5), 1.4, 0.6);
-        anchors[2].text = '찬 기단';
-        anchors[3].visible = true;
-        anchors[3].pos.set(Math.min(5.6, xMid + 2.6), 1.5, 0.6);
-        anchors[3].text = '따뜻한 기단';
-        anchors[4].visible = false;
+        anchors[0].visible = true;
+        anchors[0].pos.set(Math.max(-5.8, xMid - 2.5), 1.4, 0.6);
+        anchors[0].text = '찬 기단';
+        anchors[1].visible = true;
+        anchors[1].pos.set(Math.min(5.6, xMid + 2.6), 1.5, 0.6);
+        anchors[1].text = '따뜻한 기단';
+        anchors[2].visible = false;
+        anchors[3].visible = false;
+        anchors[4].visible = true;
+        anchors[4].pos.set(xMid, 3.0, 0);
+        anchors[4].text = '정체전선 구름';
         anchors[5].visible = false;
-        anchors[6].visible = true;
-        anchors[6].pos.set(xMid, 3.0, 0);
-        anchors[6].text = '정체전선 구름';
-        anchors[7].visible = false;
       } else if (!s.isOccludedAtCut) {
         // Stage 2: Open Cold Front + Warm Sector + Warm Front
         const coldTop = (x: number) =>
@@ -254,22 +252,22 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
         warmGlideArrow.position.set(xW - 0.2 + pulse * 1.6, 0.85 + pulse * 0.65, 0.9);
         warmGlideArrow.rotation.set(0, 0, 0.4);
 
+        anchors[0].visible = true;
+        anchors[0].pos.set(Math.max(-5.8, xC - 2.1), 1.3, 0.7);
+        anchors[0].text = '찬 공기';
+        anchors[1].visible = true;
+        anchors[1].pos.set((xC + xW) * 0.5, 1.25, 0.7);
+        anchors[1].text = '따뜻한 공기';
         anchors[2].visible = true;
-        anchors[2].pos.set(Math.max(-5.8, xC - 2.1), 1.3, 0.7);
-        anchors[2].text = '찬 공기 (북서풍)';
+        anchors[2].pos.set(Math.min(5.8, xW + 2.4), 0.75, 0.7);
+        anchors[2].text = '찬 공기';
         anchors[3].visible = true;
-        anchors[3].pos.set((xC + xW) * 0.5, 1.25, 0.7);
-        anchors[3].text = '따뜻한 공기 (남서풍)';
+        anchors[3].pos.set(xC - 0.55, 3.25, 0);
+        anchors[3].text = '적란운';
         anchors[4].visible = true;
-        anchors[4].pos.set(Math.min(5.8, xW + 2.4), 0.75, 0.7);
-        anchors[4].text = '찬 공기 (남동풍)';
-        anchors[5].visible = true;
-        anchors[5].pos.set(xC - 0.55, 3.25, 0);
-        anchors[5].text = '적란운 (소나기)';
-        anchors[6].visible = true;
-        anchors[6].pos.set(Math.min(5.4, xW + 2.0), 2.75, 0);
-        anchors[6].text = '층운형 구름 (지속적 비)';
-        anchors[7].visible = false;
+        anchors[4].pos.set(Math.min(5.4, xW + 2.0), 2.75, 0);
+        anchors[4].text = '층운형 구름';
+        anchors[5].visible = false;
       } else {
         // Stage 3 & 4: Occluded -> Dissipation (warm air lifted completely aloft!)
         const occ = s.occlusionAmount; // 0..1
@@ -328,20 +326,20 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
         warmUpArrow.rotation.set(0, 0, Math.PI / 2);
         warmGlideArrow.visible = false;
 
+        anchors[0].visible = true;
+        anchors[0].pos.set(-3.8, 1.1, 0.7);
+        anchors[0].text = diss >= 0.6 ? '찬 공기 (지표 덮음)' : '뒤쪽 찬 공기';
+        anchors[1].visible = diss < 0.9;
+        anchors[1].pos.set(xMeet + 0.1, Math.min(3.9, liftFloor + 1.15), 0.6);
+        anchors[1].text = diss >= 0.6 ? '소멸 중인 온난 공기' : '상승한 따뜻한 공기';
         anchors[2].visible = true;
-        anchors[2].pos.set(-3.8, 1.1, 0.7);
-        anchors[2].text = diss >= 0.6 ? '지표면을 덮은 찬 공기' : '뒤쪽 찬 공기';
-        anchors[3].visible = diss < 0.9;
-        anchors[3].pos.set(xMeet + 0.1, Math.min(3.9, liftFloor + 1.15), 0.6);
-        anchors[3].text = diss >= 0.6 ? '상층으로 밀려 소멸 중인 온난 공기' : '상층으로 들려 올라간 따뜻한 공기';
-        anchors[4].visible = true;
-        anchors[4].pos.set(4.0, 0.9, 0.7);
-        anchors[4].text = '앞쪽 찬 공기';
-        anchors[5].visible = false;
-        anchors[6].visible = false;
-        anchors[7].visible = true;
-        anchors[7].pos.set(xMeet, 0.22, 2.2);
-        anchors[7].text = diss >= 0.65 ? '저기압 소멸 단계' : '폐색전선 (합쳐짐)';
+        anchors[2].pos.set(4.0, 0.9, 0.7);
+        anchors[2].text = '앞쪽 찬 공기';
+        anchors[3].visible = false;
+        anchors[4].visible = false;
+        anchors[5].visible = true;
+        anchors[5].pos.set(xMeet, 0.22, 2.2);
+        anchors[5].text = diss >= 0.65 ? '저기압 소멸' : '폐색전선';
       }
 
       const sig = anchors.map((a) => `${a.id}:${a.visible ? 1 : 0}:${a.text}`).join('|');
@@ -356,6 +354,11 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
     const projectLabels = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
+      const isCompact = w < 540;
+      const placed: { x: number; y: number }[] = [];
+      const minTop = 22;
+      const maxBot = h - 24;
+
       for (const anchor of anchors) {
         const el = labelRefs.current[anchor.id];
         if (!el) continue;
@@ -370,8 +373,23 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
           el.style.pointerEvents = 'none';
           continue;
         }
-        const x = Math.max(48, Math.min(w - 48, ((_proj.x + 1) / 2) * w));
-        const y = Math.max(22, Math.min(h - 22, ((-_proj.y + 1) / 2) * h));
+        const padX = isCompact ? 38 : 48;
+        const x = Math.max(padX, Math.min(w - padX, ((_proj.x + 1) / 2) * w));
+        let y = Math.max(minTop, Math.min(maxBot, ((-_proj.y + 1) / 2) * h));
+
+        const minDx = isCompact ? 72 : 92;
+        const minDy = isCompact ? 24 : 28;
+        for (let pass = 0; pass < 3; pass++) {
+          for (const prev of placed) {
+            if (Math.abs(x - prev.x) < minDx && Math.abs(y - prev.y) < minDy) {
+              const push = y < prev.y ? -minDy : minDy;
+              const nextY = y + push;
+              y = nextY >= minTop && nextY <= maxBot ? nextY : Math.max(minTop, Math.min(maxBot, y - push));
+            }
+          }
+        }
+        placed.push({ x, y });
+
         el.style.transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
         el.style.opacity = '1';
         el.style.pointerEvents = 'auto';
@@ -476,7 +494,7 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2">
           <span className="text-sm font-extrabold text-slate-900">② A–A' 절단면 입체 단면도</span>
-          <span className="text-xs text-slate-500">· 드래그 회전 가능</span>
+          <span className="hidden sm:inline text-xs text-slate-500">· A(서) ↔ A'(동)</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -502,7 +520,7 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
         </div>
       </div>
 
-      <div ref={mountRef} className="relative flex-1 min-h-[340px] lg:min-h-[420px] cursor-grab active:cursor-grabbing bg-[#eef4fb]">
+      <div ref={mountRef} className="relative flex-1 min-h-[320px] sm:min-h-[360px] lg:min-h-[420px] cursor-grab active:cursor-grabbing bg-[#eef4fb]">
         {/* Projected Korean Labels / Quiz Reveal */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
           {activeAnchors.map((anchor) => {
@@ -520,7 +538,7 @@ export const CycloneCross3DViewport: React.FC<CycloneCross3DViewportProps> = ({
                   }
                 }}
                 style={{ left: 0, top: 0 }}
-                className={`absolute px-2 py-0.5 rounded text-xs font-bold border shadow-sm whitespace-nowrap transition-opacity duration-150 ${
+                className={`absolute px-1.5 sm:px-2 py-0.5 rounded text-[11px] sm:text-xs font-bold border shadow-sm whitespace-nowrap transition-opacity duration-150 ${
                   isVisible
                     ? toneBadgeStyles[anchor.tone]
                     : 'bg-amber-400 text-slate-950 border-amber-600 hover:bg-amber-300 cursor-pointer'

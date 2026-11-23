@@ -510,31 +510,31 @@ export const CycloneMapCanvas: React.FC<CycloneMapCanvasProps> = ({
   const mapLabels: { id: string; text: string; x: string; y: string; tone: string; show: boolean }[] = [
     {
       id: 'nw_wind',
-      text: '북서풍 · 소나기 (찬 공기)',
+      text: '북서풍 · 소나기',
       x: toPctX(coldXNorm - 0.24),
-      y: toPctY(cutY - 0.25),
+      y: toPctY(cutY - 0.26),
       tone: 'bg-blue-700 text-white border-blue-900',
       show: progress >= 0.2 && dissipationAmount < 0.8,
     },
     {
       id: 'sw_wind',
-      text: '남서풍 · 맑음 (따뜻한 공기)',
+      text: '남서풍 · 맑음',
       x: toPctX((coldXNorm + warmXNorm) / 2),
-      y: toPctY(cutY + 0.14),
+      y: toPctY(cutY + 0.16),
       tone: 'bg-red-600 text-white border-red-800',
       show: progress >= 0.2 && !isOccludedAtCut && dissipationAmount < 0.7,
     },
     {
       id: 'se_wind',
-      text: '남동풍 · 지속적 비 (찬 공기)',
+      text: '남동풍 · 비',
       x: toPctX(warmXNorm + 0.25),
-      y: toPctY(cutY - 0.25),
+      y: toPctY(cutY - 0.26),
       tone: 'bg-teal-700 text-white border-teal-900',
       show: progress >= 0.2 && dissipationAmount < 0.8,
     },
     {
       id: 'occ_label',
-      text: '폐색전선 형성',
+      text: '폐색전선',
       x: toPctX(centerX + 0.05),
       y: toPctY(centerY + 0.2),
       tone: 'bg-violet-700 text-white border-violet-900',
@@ -547,7 +547,7 @@ export const CycloneMapCanvas: React.FC<CycloneMapCanvasProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2">
           <span className="text-sm font-extrabold text-slate-900">① 위에서 내려다본 지상 일기도</span>
-          <span className="text-xs text-slate-500">· A–A' 절단선 연동</span>
+          <span className="hidden sm:inline text-xs text-slate-500">· A–A' 절단선 연동</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-slate-600">단면 위치:</span>
@@ -572,7 +572,7 @@ export const CycloneMapCanvas: React.FC<CycloneMapCanvasProps> = ({
         </div>
       </div>
 
-      <div ref={containerRef} className="relative flex-1 min-h-[340px] lg:min-h-[420px]">
+      <div ref={containerRef} className="relative flex-1 min-h-[320px] sm:min-h-[360px] lg:min-h-[420px]">
         <canvas ref={canvasRef} className="w-full h-full block" />
         {/* Overlay Labels / Quiz Click-to-Reveal */}
         <div className="pointer-events-none absolute inset-0">
@@ -590,7 +590,7 @@ export const CycloneMapCanvas: React.FC<CycloneMapCanvasProps> = ({
                     }
                   }}
                   style={{ left: item.x, top: item.y }}
-                  className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-xs font-bold border shadow-sm whitespace-nowrap transition-colors ${
+                  className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 px-1.5 sm:px-2 py-0.5 rounded text-[11px] sm:text-xs font-bold border shadow-sm whitespace-nowrap transition-colors ${
                     revealed
                       ? item.tone
                       : 'bg-amber-400 text-slate-950 border-amber-600 hover:bg-amber-300 cursor-pointer'

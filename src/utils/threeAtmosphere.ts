@@ -204,7 +204,7 @@ export class ParametricAirMass {
   private readonly geometry: THREE.BufferGeometry;
   private readonly frontLineGeo: THREE.BufferGeometry;
   private readonly mesh: THREE.Mesh;
-  private readonly frontLine: THREE.Line;
+  private readonly frontLine: THREE.LineLoop;
   private readonly positions: Float32Array;
   private readonly frontLinePos: Float32Array;
   private readonly halfD: number;
@@ -263,12 +263,12 @@ export class ParametricAirMass {
     this.mesh.renderOrder = 2;
     this.group.add(this.mesh);
 
-    // Crisp outline on the front cutaway plane (+halfD)
-    const loopCount = numSlices * 2 + 1;
+    // Crisp outline loop on the front cutaway plane (+halfD)
+    const loopCount = numSlices * 2;
     this.frontLinePos = new Float32Array(loopCount * 3);
     this.frontLineGeo = new THREE.BufferGeometry();
     this.frontLineGeo.setAttribute('position', new THREE.BufferAttribute(this.frontLinePos, 3));
-    this.frontLine = new THREE.Line(
+    this.frontLine = new THREE.LineLoop(
       this.frontLineGeo,
       new THREE.LineBasicMaterial({ color: outlineColorHex, transparent: true, opacity: 0.85 })
     );
@@ -324,18 +324,12 @@ export class ParametricAirMass {
       this.frontLinePos[topIdx + 1] = yt;
       this.frontLinePos[topIdx + 2] = zF + 0.015;
 
-      // Bottom edge of front outline: backward
+      // Bottom edge of front outline: backward (indices 2*n+1 down to n+1)
       const botIdx = (n * 2 + 1 - i) * 3;
       this.frontLinePos[botIdx + 0] = x;
       this.frontLinePos[botIdx + 1] = yb;
       this.frontLinePos[botIdx + 2] = zF + 0.015;
     }
-
-    // Close loop back to first top point
-    const closeIdx = (n * 2 + 1) * 3;
-    this.frontLinePos[closeIdx + 0] = this.frontLinePos[0];
-    this.frontLinePos[closeIdx + 1] = this.frontLinePos[1];
-    this.frontLinePos[closeIdx + 2] = this.frontLinePos[2];
 
     (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     this.geometry.computeVertexNormals();
@@ -357,9 +351,13 @@ export class ParametricAirMass {
  * 3D 전선면(Frontal Surface) 리본 — 찬 공기와 따뜻한 공기 경계면을 선명하게 강조
  */
 export class FrontalSurfaceRibbon {
+  public readonly group = new THREE.Group();
   public readonly mesh: THREE.Mesh;
   private readonly geometry: THREE.BufferGeometry;
+  private readonly edgeLineGeo: THREE.BufferGeometry;
+  private readonly edgeLine: THREE.Line;
   private readonly positions: Float32Array;
+  private readonly edgePositions: Float32Array;
   private readonly segments: number;
 
   constructor(colorHex = 0x38bdf8, segments = 48) {
@@ -379,15 +377,27 @@ export class FrontalSurfaceRibbon {
     const mat = new THREE.MeshStandardMaterial({
       color: colorHex,
       emissive: colorHex,
-      emissiveIntensity: 0.25,
+      emissiveIntensity: 0.35,
       transparent: true,
-      opacity: 0.58,
+      opacity: 0.65,
       roughness: 0.25,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
     this.mesh = new THREE.Mesh(this.geometry, mat);
-    this.mesh.renderOrder = 4;
+    this.mesh.renderOrder = 6;
+    this.group.add(this.mesh);
+
+    // Crisp bright edge along the +Z front cutaway face
+    this.edgePositions = new Float32Array(numSlices * 3);
+    this.edgeLineGeo = new THREE.BufferGeometry();
+    this.edgeLineGeo.setAttribute('position', new THREE.BufferAttribute(this.edgePositions, 3));
+    this.edgeLine = new THREE.Line(
+      this.edgeLineGeo,
+      new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.98 })
+    );
+    this.edgeLine.renderOrder = 7;
+    this.group.add(this.edgeLine);
   }
 
   public update(
@@ -397,12 +407,13 @@ export class FrontalSurfaceRibbon {
     colorHex?: number,
     visible = true
   ): void {
-    this.mesh.visible = visible && xEnd - xStart > 0.05;
-    if (!this.mesh.visible) return;
+    this.group.visible = visible && xEnd - xStart > 0.05;
+    if (!this.group.visible) return;
     if (colorHex !== undefined) {
       const mat = this.mesh.material as THREE.MeshStandardMaterial;
       mat.color.setHex(colorHex);
       mat.emissive.setHex(colorHex);
+      (this.edgeLine.material as THREE.LineBasicMaterial).color.setHex(colorHex);
     }
 
     const halfD = ATM_HALF_D - 0.04;
@@ -416,15 +427,25 @@ export class FrontalSurfaceRibbon {
       this.positions[base + 3] = x;
       this.positions[base + 4] = y;
       this.positions[base + 5] = -halfD;
+
+      const eBase = i * 3;
+      this.edgePositions[eBase + 0] = x;
+      this.edgePositions[eBase + 1] = y;
+      this.edgePositions[eBase + 2] = halfD + 0.03;
     }
     (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     this.geometry.computeVertexNormals();
     this.geometry.computeBoundingSphere();
+
+    (this.edgeLineGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+    this.edgeLineGeo.computeBoundingSphere();
   }
 
   public dispose(): void {
     this.geometry.dispose();
+    this.edgeLineGeo.dispose();
     (this.mesh.material as THREE.Material).dispose();
+    (this.edgeLine.material as THREE.Material).dispose();
   }
 }
 
@@ -548,73 +569,128 @@ export function createGroundFrontSymbols(
   const colorMap = {
     cold: 0x1d4ed8,
     warm: 0xdc2626,
-    stationary: 0x4f46e5,
+    stationary: 0x1d4ed8,
     occluded: 0x7c3aed,
   };
 
-  // Main ground line along Z
-  const lineMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.11, 0.04, ATM_DEPTH - 0.25),
-    new THREE.MeshStandardMaterial({
-      color: mode === 'stationary' ? 0x334155 : colorMap[mode],
-      roughness: 0.4,
-    })
+  // High-contrast white backing strip so symbols never blend into blue/red air masses or rain zones
+  const backingStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.34, 0.045, ATM_DEPTH - 0.14),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
   );
-  lineMesh.position.y = 0.03;
-  group.add(lineMesh);
+  backingStrip.position.y = 0.035;
+  backingStrip.renderOrder = 10;
+  group.add(backingStrip);
 
-  const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4, side: THREE.DoubleSide });
-  const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4, side: THREE.DoubleSide });
-  const purpleMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.4, side: THREE.DoubleSide });
+  const makeSymbolMat = (hex: number) =>
+    new THREE.MeshStandardMaterial({
+      color: hex,
+      emissive: hex,
+      emissiveIntensity: 0.45,
+      roughness: 0.35,
+      side: THREE.DoubleSide,
+    });
 
-  // Triangle shape pointing +X in XZ plane
+  const blueMat = makeSymbolMat(0x1d4ed8);
+  const redMat = makeSymbolMat(0xdc2626);
+  const purpleMat = makeSymbolMat(0x7c3aed);
+  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+
+  // Main front ground line(s)
+  if (mode === 'stationary') {
+    const segLen = (ATM_DEPTH - 0.2) / 6;
+    for (let i = 0; i < 6; i++) {
+      const zCenter = -(ATM_DEPTH - 0.2) / 2 + segLen * (i + 0.5);
+      const segMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.075, segLen + 0.01),
+        i % 2 === 0 ? blueMat : redMat
+      );
+      segMesh.position.set(0, 0.072, zCenter);
+      segMesh.renderOrder = 11;
+      group.add(segMesh);
+    }
+  } else {
+    const lineMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.075, ATM_DEPTH - 0.18),
+      makeSymbolMat(colorMap[mode])
+    );
+    lineMesh.position.y = 0.072;
+    lineMesh.renderOrder = 11;
+    group.add(lineMesh);
+  }
+
+  // Front cutaway edge marker sphere at z = +ATM_HALF_D so front view clearly shows intersection point
+  const edgeMarkerMat =
+    mode === 'cold' ? blueMat : mode === 'warm' ? redMat : mode === 'occluded' ? purpleMat : makeSymbolMat(0x4f46e5);
+  const frontMarker = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), edgeMarkerMat);
+  frontMarker.position.set(0, 0.11, ATM_HALF_D - 0.04);
+  frontMarker.renderOrder = 13;
+  group.add(frontMarker);
+
+  // Larger, thicker Triangle shape pointing +X in XZ plane
   const triShape = new THREE.Shape();
-  triShape.moveTo(0, -0.26);
-  triShape.lineTo(0.42, 0);
-  triShape.lineTo(0, 0.26);
+  triShape.moveTo(0, -0.35);
+  triShape.lineTo(0.58, 0);
+  triShape.lineTo(0, 0.35);
   triShape.closePath();
-  const triGeo = new THREE.ExtrudeGeometry(triShape, { depth: 0.04, bevelEnabled: false });
+  const triGeo = new THREE.ExtrudeGeometry(triShape, { depth: 0.085, bevelEnabled: false });
   triGeo.rotateX(-Math.PI / 2);
 
-  // Semicircle shape bulging +X in XZ plane
+  // Crisp white outline backing behind triangle
+  const triHaloShape = new THREE.Shape();
+  triHaloShape.moveTo(-0.04, -0.43);
+  triHaloShape.lineTo(0.68, 0);
+  triHaloShape.lineTo(-0.04, 0.43);
+  triHaloShape.closePath();
+  const triHaloGeo = new THREE.ExtrudeGeometry(triHaloShape, { depth: 0.045, bevelEnabled: false });
+  triHaloGeo.rotateX(-Math.PI / 2);
+
+  // Larger, thicker Semicircle shape bulging +X in XZ plane
   const semiShape = new THREE.Shape();
-  semiShape.absarc(0, 0, 0.27, -Math.PI / 2, Math.PI / 2, false);
+  semiShape.absarc(0, 0, 0.37, -Math.PI / 2, Math.PI / 2, false);
   semiShape.closePath();
-  const semiGeo = new THREE.ExtrudeGeometry(semiShape, { depth: 0.04, bevelEnabled: false });
+  const semiGeo = new THREE.ExtrudeGeometry(semiShape, { depth: 0.085, bevelEnabled: false });
   semiGeo.rotateX(-Math.PI / 2);
 
-  const zPositions = [-2.1, -1.25, -0.4, 0.45, 1.3, 2.15];
+  const semiHaloShape = new THREE.Shape();
+  semiHaloShape.absarc(0, 0, 0.45, -Math.PI / 2, Math.PI / 2, false);
+  semiHaloShape.closePath();
+  const semiHaloGeo = new THREE.ExtrudeGeometry(semiHaloShape, { depth: 0.045, bevelEnabled: false });
+  semiHaloGeo.rotateX(-Math.PI / 2);
+
+  const zPositions = [-2.15, -1.28, -0.42, 0.44, 1.30, 2.16];
+
+  const addSymbol = (geo: THREE.BufferGeometry, haloGeo: THREE.BufferGeometry, mat: THREE.Material, x: number, z: number, rotY = 0) => {
+    const halo = new THREE.Mesh(haloGeo, whiteMat);
+    halo.rotation.y = rotY;
+    halo.position.set(x, 0.028, z);
+    halo.renderOrder = 11;
+    group.add(halo);
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.y = rotY;
+    mesh.position.set(x, 0.048, z);
+    mesh.renderOrder = 12;
+    group.add(mesh);
+  };
 
   zPositions.forEach((z, idx) => {
     if (mode === 'cold') {
-      const m = new THREE.Mesh(triGeo, blueMat);
-      m.position.set(0.04, 0.015, z);
-      group.add(m);
+      addSymbol(triGeo, triHaloGeo, blueMat, 0.06, z);
     } else if (mode === 'warm') {
-      const m = new THREE.Mesh(semiGeo, redMat);
-      m.position.set(0.04, 0.015, z);
-      group.add(m);
+      addSymbol(semiGeo, semiHaloGeo, redMat, 0.06, z);
     } else if (mode === 'stationary') {
       if (idx % 2 === 0) {
-        const m = new THREE.Mesh(triGeo, blueMat);
-        m.position.set(0.04, 0.015, z);
-        group.add(m);
+        addSymbol(triGeo, triHaloGeo, blueMat, 0.06, z, 0);
       } else {
-        const m = new THREE.Mesh(semiGeo, redMat);
-        m.rotation.y = Math.PI; // 반대쪽(-X 찬 공기 쪽)으로 반원
-        m.position.set(-0.04, 0.015, z);
-        group.add(m);
+        addSymbol(semiGeo, semiHaloGeo, redMat, -0.06, z, Math.PI);
       }
     } else {
       // occluded: purple triangle + semicircle alternating on SAME (+X) side
       if (idx % 2 === 0) {
-        const m = new THREE.Mesh(triGeo, purpleMat);
-        m.position.set(0.04, 0.015, z);
-        group.add(m);
+        addSymbol(triGeo, triHaloGeo, purpleMat, 0.06, z);
       } else {
-        const m = new THREE.Mesh(semiGeo, purpleMat);
-        m.position.set(0.04, 0.015, z);
-        group.add(m);
+        addSymbol(semiGeo, semiHaloGeo, purpleMat, 0.06, z);
       }
     }
   });

@@ -135,28 +135,29 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
     const terrainAndBox = createTerrainAndBox();
     scene.add(terrainAndBox);
 
-    // Air Mass 3D Volumes
-    const coldMass = new ParametricAirMass(0x2563eb, 0.40, 0x1e40af);
-    const warmMass = new ParametricAirMass(0xef4444, 0.34, 0xb91c1c);
-    const coolAheadMass = new ParametricAirMass(0x3b82f6, 0.34, 0x1d4ed8);
+    // Air Mass 3D Volumes (balanced translucency so ground front symbols stay vivid)
+    const coldMass = new ParametricAirMass(0x2563eb, 0.32, 0x1e40af);
+    const warmMass = new ParametricAirMass(0xef4444, 0.27, 0xb91c1c);
+    const coolAheadMass = new ParametricAirMass(0x3b82f6, 0.28, 0x1d4ed8);
     scene.add(coldMass.group, warmMass.group, coolAheadMass.group);
 
     // Frontal surface ribbons
     const primaryRibbon = new FrontalSurfaceRibbon(0x38bdf8);
     const secondaryRibbon = new FrontalSurfaceRibbon(0xfb7185);
-    scene.add(primaryRibbon.mesh, secondaryRibbon.mesh);
+    scene.add(primaryRibbon.group, secondaryRibbon.group);
 
-    // Ground precipitation zone highlight plane
+    // Ground precipitation zone highlight plane (below raised ground front symbols)
     const rainZoneGeo = new THREE.PlaneGeometry(1, ATM_HALF_D * 1.9);
     rainZoneGeo.rotateX(-Math.PI / 2);
     const rainZoneMat = new THREE.MeshBasicMaterial({
       color: 0x0ea5e9,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.22,
       depthWrite: false,
     });
     const rainZonePatch = new THREE.Mesh(rainZoneGeo, rainZoneMat);
-    rainZonePatch.position.y = 0.015;
+    rainZonePatch.position.y = 0.008;
+    rainZonePatch.renderOrder = 1;
     scene.add(rainZonePatch);
 
     // Clouds
@@ -188,15 +189,14 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
       renderer.compile(scene, camera);
     }
 
-    // Anchors for 2D Korean Labels
+    // Anchors for 2D Korean Labels (concise 5-label set for high legibility)
     const anchors: AnchorSpec[] = [
-      { id: 'cold_air', text: '찬 공기 (한랭 기단)', tone: 'cold', pos: new THREE.Vector3(), visible: true },
-      { id: 'warm_air', text: '따뜻한 공기 (온난 기단)', tone: 'warm', pos: new THREE.Vector3(), visible: true },
+      { id: 'cold_air', text: '찬 공기', tone: 'cold', pos: new THREE.Vector3(), visible: true },
+      { id: 'warm_air', text: '따뜻한 공기', tone: 'warm', pos: new THREE.Vector3(), visible: true },
       { id: 'cool_ahead', text: '앞쪽 찬 공기', tone: 'cold', pos: new THREE.Vector3(), visible: false },
       { id: 'front_surface', text: '전선면', tone: 'front', pos: new THREE.Vector3(), visible: true },
-      { id: 'front_line', text: '전선 (지표면 기호)', tone: 'front', pos: new THREE.Vector3(), visible: true },
-      { id: 'cloud', text: '적란운', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
-      { id: 'rain', text: '좁은 구역 소나기', tone: 'rain', pos: new THREE.Vector3(), visible: true },
+      { id: 'front_line', text: '전선', tone: 'front', pos: new THREE.Vector3(), visible: true },
+      { id: 'cloud', text: '적란운 · 소나기', tone: 'cloud', pos: new THREE.Vector3(), visible: true },
     ];
     setActiveAnchors(anchors.map((a) => ({ id: a.id, text: a.text, tone: a.tone })));
 
@@ -218,7 +218,7 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
       stratusCloud.visible = false;
       mixedCloud.visible = false;
       coolAheadMass.group.visible = false;
-      secondaryRibbon.mesh.visible = false;
+      secondaryRibbon.group.visible = false;
       coldArrow2.visible = false;
 
       let rainXMin = 0;
@@ -261,19 +261,17 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
         warmArrow2.position.set(xF + 1.5 - pulse * 0.6, 0.85 + pulse * 0.9, -0.9);
         warmArrow2.rotation.set(0, 0, 0.92);
 
-        anchors[0].pos.set(Math.max(-5.8, xF - 2.6), 1.4, 0.8);
-        anchors[0].text = '찬 공기 (밀도 큼)';
-        anchors[1].pos.set(Math.min(5.6, xF + 2.8), 1.5, 0.6);
-        anchors[1].text = '따뜻한 공기 (밀도 작음)';
+        anchors[0].pos.set(Math.max(-5.8, xF - 2.8), 1.35, 0.8);
+        anchors[0].text = '찬 공기';
+        anchors[1].pos.set(Math.min(5.6, xF + 2.9), 1.55, 0.6);
+        anchors[1].text = '따뜻한 공기';
         anchors[2].visible = false;
-        anchors[3].pos.set(xF - 0.85, 2.0, 2.5);
-        anchors[3].text = '전선면 (급경사)';
-        anchors[4].pos.set(xF, 0.15, 2.3);
-        anchors[4].text = '한랭전선 (파란 삼각형)';
+        anchors[3].pos.set(xF - 0.9, 2.05, 2.4);
+        anchors[3].text = '전선면';
+        anchors[4].pos.set(xF + 0.1, 0.18, 2.35);
+        anchors[4].text = '한랭전선';
         anchors[5].pos.set(xF - 0.75, 3.85, 0);
-        anchors[5].text = '적란운 (수직 발달)';
-        anchors[6].pos.set((rainXMin + rainXMax) / 2, 0.65, -1.6);
-        anchors[6].text = '좁은 구역 소나기';
+        anchors[5].text = '적란운 · 좁은 소나기';
       } else if (fType === 'warm') {
         const xF = -3.4 + t * 4.4;
         const slopeH = (x: number) => Math.min(3.35, Math.max(0.02, (x - xF) * 0.42));
@@ -306,19 +304,17 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
         coldArrow1.position.set(xF + 2.3 + pulse * 0.7, 0.45, 1.2);
         coldArrow1.rotation.set(0, 0, 0.0);
 
-        anchors[0].pos.set(Math.min(5.6, xF + 3.6), 0.75, 1.0);
-        anchors[0].text = '찬 공기 (밀도 큼)';
-        anchors[1].pos.set(Math.max(-5.5, xF - 2.3), 1.6, 0.8);
-        anchors[1].text = '따뜻한 공기 (타고 오름)';
+        anchors[0].pos.set(Math.min(5.6, xF + 3.6), 0.7, 1.0);
+        anchors[0].text = '찬 공기';
+        anchors[1].pos.set(Math.max(-5.5, xF - 2.5), 1.65, 0.8);
+        anchors[1].text = '따뜻한 공기';
         anchors[2].visible = false;
-        anchors[3].pos.set(xF + 2.6, 1.15, 2.5);
-        anchors[3].text = '전선면 (완만한 경사)';
-        anchors[4].pos.set(xF, 0.15, 2.3);
-        anchors[4].text = '온난전선 (빨간 반원)';
-        anchors[5].pos.set(xF + 2.6, 3.05, 0);
-        anchors[5].text = '층운형 구름 (난층운·고층운·권운)';
-        anchors[6].pos.set((rainXMin + rainXMax) / 2, 0.7, -1.5);
-        anchors[6].text = '넓은 구역 지속적인 비';
+        anchors[3].pos.set(xF + 2.3, 1.15, 2.45);
+        anchors[3].text = '전선면';
+        anchors[4].pos.set(xF, 0.18, 2.35);
+        anchors[4].text = '온난전선';
+        anchors[5].pos.set(xF + 2.5, 3.1, 0);
+        anchors[5].text = '층운형 구름 · 넓은 비';
       } else if (fType === 'stationary') {
         // Gentle oscillation in place
         const xF = Math.sin(t * Math.PI * 4) * 0.45;
@@ -354,25 +350,23 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
         warmArrow2.rotation.set(0, 0, 2.35);
 
         anchors[0].pos.set(-3.9, 1.45, 0.8);
-        anchors[0].text = '찬 기단 (예: 오호츠크해 기단)';
+        anchors[0].text = '찬 기단';
         anchors[1].pos.set(3.9, 1.45, 0.8);
-        anchors[1].text = '따뜻한 기단 (예: 북태평양 기단)';
+        anchors[1].text = '따뜻한 기단';
         anchors[2].visible = false;
-        anchors[3].pos.set(xF - 1.1, 1.9, 2.5);
-        anchors[3].text = '전선면 (세력 대치)';
-        anchors[4].pos.set(xF, 0.15, 2.3);
-        anchors[4].text = '정체전선 (위·아래 교차 기호)';
-        anchors[5].pos.set(xF + 0.1, 3.1, 0);
-        anchors[5].text = '전선대 구름 (장마 구름)';
-        anchors[6].pos.set(xF + 0.2, 0.7, -1.5);
-        anchors[6].text = '오래 머무르며 많은 비';
+        anchors[3].pos.set(xF - 1.1, 1.9, 2.45);
+        anchors[3].text = '전선면';
+        anchors[4].pos.set(xF, 0.18, 2.35);
+        anchors[4].text = '정체전선';
+        anchors[5].pos.set(xF + 0.1, 3.15, 0);
+        anchors[5].text = '장마 구름 · 많은 비';
       } else {
         // Occluded Front: cold front catches up to warm front, lifting warm air aloft
-        const xC = -4.2 + t * 5.9; // catches up faster
-        const xW = -1.2 + t * 2.5; // moves slower
-        const gap = xW - xC; // becomes <= 0 after t ~ 0.45
-        const occluded = gap <= 0.1;
-        const liftH = occluded ? Math.min(2.1, (-gap) * 1.45) : 0;
+        const xC = -3.8 + t * 6.4; // catches up faster
+        const xW = -1.6 + t * 2.4; // moves slower
+        const gap = xW - xC; // becomes <= 0 around t ~ 0.34
+        const occluded = gap <= 0.15;
+        const liftH = occluded ? Math.min(2.2, Math.max(0.25, (-gap + 0.15) * 1.5)) : 0;
         const xMeet = occluded ? xW : xC;
 
         const coldBehindTop = (x: number) => {
@@ -439,21 +433,19 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
 
         warmArrow2.visible = false;
 
-        anchors[0].pos.set(Math.max(-5.6, xC - 2.4), 1.4, 0.8);
+        anchors[0].pos.set(Math.max(-5.6, xC - 2.6), 1.35, 0.8);
         anchors[0].text = '뒤쪽 찬 공기';
         anchors[1].pos.set(xMeet + 0.1, occluded ? 2.5 + liftH * 0.35 : 1.1, 0.7);
-        anchors[1].text = occluded ? '위로 들려 올라간 따뜻한 공기' : '따뜻한 공기 (좁아지는 중)';
+        anchors[1].text = occluded ? '들려 오른 따뜻한 공기' : '따뜻한 공기';
         anchors[2].visible = true;
-        anchors[2].pos.set(Math.min(5.6, xW + 2.7), 0.9, 0.8);
+        anchors[2].pos.set(Math.min(5.6, xW + 2.8), 0.9, 0.8);
         anchors[2].text = '앞쪽 찬 공기';
-        anchors[3].pos.set(xMeet - 0.3, 1.8, 2.5);
-        anchors[3].text = '합쳐진 전선면';
-        anchors[4].pos.set(xMeet, 0.15, 2.3);
-        anchors[4].text = occluded ? '폐색전선 (보라색 삼각형+반원)' : '한랭전선이 온난전선 추격';
-        anchors[5].pos.set(xMeet + 0.3, 3.6, 0);
-        anchors[5].text = '두꺼운 구름층';
-        anchors[6].pos.set((rainXMin + rainXMax) / 2, 0.7, -1.5);
-        anchors[6].text = '전선 부근 강수';
+        anchors[3].pos.set(xMeet - 0.3, 1.85, 2.45);
+        anchors[3].text = '전선면';
+        anchors[4].pos.set(xMeet, 0.18, 2.35);
+        anchors[4].text = occluded ? '폐색전선' : '전선 추격 중';
+        anchors[5].pos.set(xMeet + 0.3, 3.65, 0);
+        anchors[5].text = '두꺼운 구름 · 비';
       }
 
       // Ground precipitation zone highlight
@@ -477,6 +469,11 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
     const projectLabelsToDOM = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
+      const isCompact = w < 640;
+      const placed: { x: number; y: number }[] = [];
+      const minTop = isCompact ? 54 : 56;
+      const maxBot = h - (isCompact ? 72 : 76);
+
       for (const anchor of anchors) {
         const el = labelRefs.current[anchor.id];
         if (!el) continue;
@@ -491,11 +488,27 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
           el.style.pointerEvents = 'none';
           continue;
         }
-        const x = ((_projVec.x + 1) / 2) * w;
-        const y = ((-_projVec.y + 1) / 2) * h;
-        const clampedX = Math.max(56, Math.min(w - 56, x));
-        const clampedY = Math.max(24, Math.min(h - 76, y));
-        el.style.transform = `translate(-50%, -50%) translate(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px)`;
+        const rawX = ((_projVec.x + 1) / 2) * w;
+        const rawY = ((-_projVec.y + 1) / 2) * h;
+        const padX = isCompact ? 42 : 56;
+        const x = Math.max(padX, Math.min(w - padX, rawX));
+        let y = Math.max(minTop, Math.min(maxBot, rawY));
+
+        // De-overlap vertically against already placed labels on small screens
+        const minDx = isCompact ? 76 : 104;
+        const minDy = isCompact ? 26 : 30;
+        for (let pass = 0; pass < 3; pass++) {
+          for (const prev of placed) {
+            if (Math.abs(x - prev.x) < minDx && Math.abs(y - prev.y) < minDy) {
+              const pushUp = y < prev.y ? -minDy : minDy;
+              const nextY = y + pushUp;
+              y = nextY >= minTop && nextY <= maxBot ? nextY : Math.max(minTop, Math.min(maxBot, y - pushUp));
+            }
+          }
+        }
+        placed.push({ x, y });
+
+        el.style.transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
         el.style.opacity = '1';
         el.style.pointerEvents = 'auto';
       }
@@ -598,17 +611,17 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[500px] lg:h-[540px] rounded-xl overflow-hidden border border-slate-200 bg-[#eef4fb]">
+    <div className="relative w-full h-[430px] sm:h-[500px] lg:h-[540px] rounded-xl overflow-hidden border border-slate-200 bg-[#eef4fb]">
       {/* Isolated WebGL Container */}
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* Top-Left Camera Preset & Orbit Hint */}
-      <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
-        <div className="flex items-center gap-1 bg-white/95 p-1 rounded-lg border border-slate-200 shadow-sm">
+      <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-0.5 sm:gap-1 bg-white/95 p-1 rounded-lg border border-slate-200 shadow-sm">
           <button
             type="button"
             onClick={() => handleSelectCamera('iso')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               cameraPreset === 'iso'
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-100'
@@ -620,46 +633,47 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
           <button
             type="button"
             onClick={() => handleSelectCamera('cross')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               cameraPreset === 'cross'
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            정면 단면
+            정면
           </button>
           <button
             type="button"
             onClick={() => handleSelectCamera('top')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               cameraPreset === 'top'
                 ? 'bg-slate-900 text-white'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
             <Compass className="w-3.5 h-3.5" />
-            위(일기도)
+            위
           </button>
         </div>
-        <span className="hidden sm:inline-block text-xs font-medium text-slate-600 bg-white/90 px-2.5 py-1.5 rounded-lg border border-slate-200">
-          마우스 드래그로 3D 회전 · 스크롤 확대
+        <span className="hidden md:inline-block text-xs font-medium text-slate-600 bg-white/90 px-2.5 py-1.5 rounded-lg border border-slate-200">
+          드래그로 3D 회전 · 스크롤 확대
         </span>
       </div>
 
       {/* Top-Right Quiz Label Toggle */}
-      <div className="absolute top-3 right-3 z-10">
+      <div className="absolute top-2.5 right-2.5 z-10">
         <button
           type="button"
           onClick={onToggleLabels}
-          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg border shadow-sm transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-lg border shadow-sm transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
             showLabels
               ? 'bg-white/95 text-slate-800 border-slate-300 hover:bg-slate-50'
               : 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600'
           }`}
         >
-          {showLabels ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-          {showLabels ? '라벨 켜짐 (퀴즈 모드 끄기)' : '퀴즈 모드 (? 클릭해 확인)'}
+          {showLabels ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          <span className="hidden sm:inline">{showLabels ? '라벨 켜짐 (퀴즈 모드 끄기)' : '퀴즈 모드 (? 클릭)'}</span>
+          <span className="sm:hidden">{showLabels ? '라벨 ON' : '퀴즈 (?)'}</span>
         </button>
       </div>
 
@@ -681,7 +695,7 @@ export const Front3DViewport: React.FC<Front3DViewportProps> = ({
               }}
               style={{ left: 0, top: 0 }}
               title={!showLabels ? '클릭하여 용어 확인하기' : undefined}
-              className={`absolute px-2.5 py-1 rounded-md text-xs sm:text-sm font-bold border shadow-sm transition-opacity duration-150 whitespace-nowrap ${
+              className={`absolute px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[11px] sm:text-xs font-bold border shadow-sm transition-opacity duration-150 whitespace-nowrap ${
                 isVisible
                   ? toneBadgeStyles[anchor.tone]
                   : 'bg-amber-400 text-slate-950 border-amber-600 hover:bg-amber-300 cursor-pointer'

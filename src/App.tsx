@@ -69,7 +69,7 @@ export default function App() {
 
   const handleSelectFront = (type: FrontType) => {
     setSelectedFront(type);
-    setFrontProgress(type === 'occluded' ? 0.15 : 0.35);
+    setFrontProgress(type === 'occluded' ? 0.48 : 0.35);
     setFrontPlaying(true);
   };
 
